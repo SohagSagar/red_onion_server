@@ -56,6 +56,21 @@ const run = async() =>{
       res.send(result);
     })
 
+    // api for getting my-order for individual orders
+    app.get('/my-order/:email',async(req,res)=>{
+      const email=req.params.email;
+      const result=await orderCollection.find({email:email}).toArray();
+      res.send(result);
+    })
+
+    //api for ordered items details
+    app.get('/my-order-details/:id',async(req,res)=>{
+      const id= req.params.id;
+      console.log('id',id);
+      const result= await orderCollection.findOne({_id:ObjectId(id)});
+      res.send(result);
+    })
+
 
 
 
@@ -81,7 +96,18 @@ const run = async() =>{
       res.send(result);
     })
      
+
+
+     //****************
+    // DELETE APIs 
+    //****************
     
+    //api for delete order items
+    app.delete('/my-order/:id',async(req,res)=>{
+      const id=req.params.id;
+      const result =await orderCollection.deleteOne({_id:ObjectId(id)});
+      res.send(result);
+    })
 
 
 
