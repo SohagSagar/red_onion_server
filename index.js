@@ -1,4 +1,4 @@
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const express = require('express');
 const app = express();
 const cors = require('cors');
@@ -23,11 +23,43 @@ const run = async() =>{
 
     //creating db collections
     const foodCollection= client.db(`${process.env.DB_NAME}`).collection('foodCollection');
+    const orderCollection= client.db(`${process.env.DB_NAME}`).collection('orderCollection');
 
 
 
    
      //********* creating apis ***********//
+
+    //****************
+    // GET APIs 
+    //****************
+
+    //api for getting food item with category
+    app.get('/food-items/:category',async(req,res)=>{
+      const category=req.params.category;
+      const filter = {category:category}
+      const result = await foodCollection.find(filter).toArray();
+      res.send(result);
+    });
+
+    //api for geting individual food item details
+    app.get('/food-details/:id',async(req,res)=>{
+      const id=req.params.id;
+      const filter = { _id: ObjectId(id) }
+      const result = await foodCollection.findOne(filter);
+      res.send(result);
+    })
+
+    //api for getting all food items
+    app.get('/food-items',async(req,res)=>{
+      const result= await foodCollection.find().toArray();
+      res.send(result);
+    })
+
+
+
+
+
 
 
     //****************
@@ -38,7 +70,15 @@ const run = async() =>{
     //api for posting food items into database
     app.post('/add-food',async(req,res)=>{
       const data = req.body;
+      const result= await foodCollection.insertOne(data)
+      res.send(result);
+    })
 
+    //api for ordering foods
+    app.post('/order-foods',async(req,res)=>{
+      const data= req.body;
+      const result = await orderCollection.insertOne(data);
+      res.send(result);
     })
      
     
@@ -53,7 +93,6 @@ const run = async() =>{
 }
 
 run().catch(console.dir);
-
 
 
 
