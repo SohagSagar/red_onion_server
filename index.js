@@ -3,6 +3,7 @@ const express = require('express');
 const app = express();
 const cors = require('cors');
 require('dotenv').config();
+const jwt = require('jsonwebtoken');
 const port = process.env.PORT || 5000;
 
 // middlewire
@@ -13,6 +14,23 @@ app.use(express.json()); // for receiving data from body and parsing that data
 const uri = `mongodb+srv://${process.env.DB_NAME}:${process.env.DB_PASS}@cluster0.fr5zi.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
+
+
+const verifyJWT= (req,res,next){
+  const authHeader = req.headers.authorization;
+  if(!authHeader){
+    return res.status(401).send({message:'unauthorized access'});
+  }
+
+  const token = authHeader.split(' ')[1];
+  jwt.verify(token,process.env.ACCESS_TOKEN, (err,decoded)=>{
+    if(err){
+      return res.status(403).send({message:'forbidden access'})
+    }
+    req.decoded=decoded;
+    next();
+  })
+}
 
 const run = async () => {
   try {
@@ -25,6 +43,7 @@ const run = async () => {
     const foodCollection = client.db(`${process.env.DB_NAME}`).collection('foodCollection');
     const orderCollection = client.db(`${process.env.DB_NAME}`).collection('orderCollection');
     const reviewCollection = client.db(`${process.env.DB_NAME}`).collection('reviewCollection');
+    const userCollection = client.db(`${process.env.DB_NAME}`).collection('userCollection');
 
 
 
@@ -121,6 +140,25 @@ const run = async () => {
       const data = req.body;
       const result = await reviewCollection.insertOne(data);
       res.send(result);
+    })
+
+
+    //****************
+    // PUT APIs 
+    //****************
+
+    //api for register user in the database
+    app.put('/users/:email',async(req,res)=>{
+      const email=req.params.email;
+      const data= req.body;
+      const filter={email:email}
+      const options={upsert:true};
+      const updatedDoc={
+        $set:data
+      };
+      const result = await userCollection.updateOne(filter,updatedDoc,options);
+      const token = jwt.sign(filter,process.env.ACCESS_TOKEN,{expiresIn:'1h'});
+      res.send({result,token});
     })
 
 
