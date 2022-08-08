@@ -16,20 +16,20 @@ const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology:
 
 
 
-const verifyJWT= (req,res,next)=>{
+const verifyJWT = (req, res, next) => {
   const authHeader = req.headers.authorization;
-  
-  if(!authHeader){
-    return res.status(401).send({message:'unauthorized access'});
+
+  if (!authHeader) {
+    return res.status(401).send({ message: 'unauthorized access' });
   }
 
   const token = authHeader.split(' ')[1];
-  jwt.verify(token,process.env.ACCESS_TOKEN,function (err,decoded){
-    if(err){
-      console.log(err);
-      return res.status(403).send({message:'forbidden access'})
+  jwt.verify(token, process.env.ACCESS_TOKEN, function (err, decoded) {
+    if (err) {
+      console.log(err.message);
+      return res.status(403).send({ message: 'forbidden access' })
     }
-    req.decoded=decoded;
+    req.decoded = decoded;
     next();
   })
 }
@@ -47,7 +47,15 @@ const run = async () => {
     const reviewCollection = client.db(`${process.env.DB_NAME}`).collection('reviewCollection');
     const userCollection = client.db(`${process.env.DB_NAME}`).collection('userCollection');
 
-
+    const verifyAdmin = async (req, res, next) => {
+      const resquester = req.decoded.email;
+      const result = await userCollection.findOne({ email: resquester });
+      if (result.role === 'superAdmin') {
+        next();
+      } else {
+        return res.status(403).send({ message: 'forbidden access' })
+      }
+    }
 
 
     //********* creating apis ***********//
@@ -57,16 +65,9 @@ const run = async () => {
     //****************
 
 
-    //api for getting superAdmin
-    app.get('/super-admin/:email', async (req, res) => {
-      const email = req.params.email;
-      const filter = { email: email }
-      const result = await userCollection.findOne(filter);
-      if(result?.role==='superAdmin'){
-       return res.status(200).send({status:200,message:"verified admin"})
-      }
-      res.status(403).send(result);
-    });
+    //****************************************
+    // ******GET APIs for User dashboard******
+    //****************************************
 
     //api for getting food item with category
     app.get('/food-items/:category', async (req, res) => {
@@ -91,33 +92,57 @@ const run = async () => {
     })
 
     // api for getting my-order for individual orders
-    app.get('/my-order/:email',verifyJWT, async (req, res) => {
+    app.get('/my-order/:email', verifyJWT, async (req, res) => {
       const email = req.params.email;
       const result = await orderCollection.find({ email: email }).toArray();
       res.send(result);
     })
 
     //api for ordered items details
-    app.get('/my-order-details/:id', async (req, res) => {
+    app.get('/my-order-details/:id', verifyJWT, async (req, res) => {
       const id = req.params.id;
       const result = await orderCollection.findOne({ _id: ObjectId(id) });
+      console.log(result);
       res.send(result);
     })
 
-    //api for getting user reviews
+    //api for getting all user reviews
     app.get('/user-reviews', async (req, res) => {
       const result = await reviewCollection.find().toArray();
       res.send(result);
     })
 
-    //api for getting user reviews
-    app.get('/user-review/:email', async (req, res) => {
-      const email= req.params.email;
-      const result = await reviewCollection.find({email:email}).toArray();
+    //api for getting individual user reviews
+    app.get('/user-review/:email', verifyJWT, async (req, res) => {
+      const email = req.params.email;
+      const result = await reviewCollection.find({ email: email }).toArray();
+      console.log('result', result);
       res.send(result);
     })
 
-    
+
+
+
+    //****************************************
+    // ******GET APIs for Admin dashboard*****
+    //****************************************
+
+    //api for getting superAdmin
+    app.get('/super-admin/:email', verifyJWT, async (req, res) => {
+      const email = req.params.email;
+      const filter = { email: email }
+      const result = await userCollection.findOne(filter);
+      if (result?.role === 'superAdmin') {
+        return res.status(200).send({ status: 200, message: "verified admin" })
+      }
+      res.status(403).send(result);
+    });
+
+    //api for geting all orders 
+    app.get('/all-orders', verifyJWT, verifyAdmin, async (req, res) => {
+      const result = await orderCollection.find().toArray();
+      res.send(result);
+    })
 
 
 
@@ -132,12 +157,13 @@ const run = async () => {
     //****************
 
 
-    //api for posting food items into database
-    app.post('/add-food', async (req, res) => {
-      const data = req.body;
-      const result = await foodCollection.insertOne(data)
-      res.send(result);
-    })
+
+    //****************************************
+    // ******POST APIs for User dashboard*****
+    //****************************************
+
+
+
 
     //api for ordering foods
     app.post('/order-foods', async (req, res) => {
@@ -154,22 +180,64 @@ const run = async () => {
     })
 
 
+
+
+    //****************************************
+    // ******POST APIs for Admin dashboard*****
+    //****************************************
+
+    //api for posting food items into database
+    app.post('/add-food', verifyJWT, verifyAdmin, async (req, res) => {
+      const data = req.body;
+      const result = await foodCollection.insertOne(data)
+      res.send(result);
+    })
+
+
+
+
+
+
+
     //****************
     // PUT APIs 
     //****************
 
+    //****************************************
+    // ******POST APIs for user dashboard*****
+    //****************************************
+
     //api for register user in the database
-    app.put('/users/:email',async(req,res)=>{
-      const email=req.params.email;
-      const data= req.body;
-      const filter={email:email}
-      const options={upsert:true};
-      const updatedDoc={
-        $set:data
+    app.put('/users/:email', async (req, res) => {
+      const email = req.params.email;
+      const data = req.body;
+      const filter = { email: email }
+      const options = { upsert: true };
+      const updatedDoc = {
+        $set: data
       };
-      const result = await userCollection.updateOne(filter,updatedDoc,options);
-      const token = jwt.sign(filter,process.env.ACCESS_TOKEN,{expiresIn:'1h'});
-      res.send({result,token});
+      const result = await userCollection.updateOne(filter, updatedDoc, options);
+      const token = jwt.sign(filter, process.env.ACCESS_TOKEN, { expiresIn: '1h' });
+      res.send({ result, token });
+    })
+
+
+    //****************************************
+    //******POST APIs for Admin dashboard*****
+    //****************************************
+
+    //api for changing order status
+    app.put('/change-status/:id', verifyJWT, verifyAdmin, async (req, res) => {
+      const id = req.params.id;
+      const data = req.body;
+      console.log(data);
+      const filter = { _id: ObjectId(id) };
+      options = { upsert: true }
+      const updatedDoc = {
+        $set: data
+      }
+      const result = await orderCollection.updateOne(filter, updatedDoc, options);
+      res.send(result);
     })
 
 
@@ -177,6 +245,10 @@ const run = async () => {
     //****************
     // DELETE APIs 
     //****************
+
+    //****************************************
+    //******POST APIs for User dashboard*****
+    //****************************************
 
     //api for delete order items
     app.delete('/my-order/:id', async (req, res) => {
@@ -187,8 +259,19 @@ const run = async () => {
 
     //api for deleting user review
     app.delete('/user-review/:id', async (req, res) => {
-      const id= req.params.id;
-      const result = await reviewCollection.deleteOne({_id:ObjectId(id)});
+      const id = req.params.id;
+      const result = await reviewCollection.deleteOne({ _id: ObjectId(id) });
+      res.send(result);
+    })
+
+
+    //****************************************
+    //******POST APIs for Admin dashboard*****
+    //****************************************
+    app.delete('/all-orders/:id',verifyJWT,verifyAdmin,async(req,res)=>{
+      const id = req.params.id;
+      const filter = {_id:ObjectId(id)}
+      const result= await orderCollection.deleteOne(filter)
       res.send(result);
     })
 
