@@ -16,15 +16,17 @@ const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology:
 
 
 
-const verifyJWT= (req,res,next){
+const verifyJWT= (req,res,next)=>{
   const authHeader = req.headers.authorization;
+  
   if(!authHeader){
     return res.status(401).send({message:'unauthorized access'});
   }
 
   const token = authHeader.split(' ')[1];
-  jwt.verify(token,process.env.ACCESS_TOKEN, (err,decoded)=>{
+  jwt.verify(token,process.env.ACCESS_TOKEN,function (err,decoded){
     if(err){
+      console.log(err);
       return res.status(403).send({message:'forbidden access'})
     }
     req.decoded=decoded;
@@ -54,6 +56,18 @@ const run = async () => {
     // GET APIs 
     //****************
 
+
+    //api for getting superAdmin
+    app.get('/super-admin/:email', async (req, res) => {
+      const email = req.params.email;
+      const filter = { email: email }
+      const result = await userCollection.findOne(filter);
+      if(result?.role==='superAdmin'){
+       return res.status(200).send({status:200,message:"verified admin"})
+      }
+      res.status(403).send(result);
+    });
+
     //api for getting food item with category
     app.get('/food-items/:category', async (req, res) => {
       const category = req.params.category;
@@ -77,7 +91,7 @@ const run = async () => {
     })
 
     // api for getting my-order for individual orders
-    app.get('/my-order/:email', async (req, res) => {
+    app.get('/my-order/:email',verifyJWT, async (req, res) => {
       const email = req.params.email;
       const result = await orderCollection.find({ email: email }).toArray();
       res.send(result);
@@ -86,7 +100,6 @@ const run = async () => {
     //api for ordered items details
     app.get('/my-order-details/:id', async (req, res) => {
       const id = req.params.id;
-      console.log('id', id);
       const result = await orderCollection.findOne({ _id: ObjectId(id) });
       res.send(result);
     })
@@ -94,7 +107,6 @@ const run = async () => {
     //api for getting user reviews
     app.get('/user-reviews', async (req, res) => {
       const result = await reviewCollection.find().toArray();
-      console.log(result);
       res.send(result);
     })
 
@@ -102,7 +114,6 @@ const run = async () => {
     app.get('/user-review/:email', async (req, res) => {
       const email= req.params.email;
       const result = await reviewCollection.find({email:email}).toArray();
-      console.log(result);
       res.send(result);
     })
 
