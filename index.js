@@ -130,7 +130,7 @@ const run = async () => {
     //api for getting superAdmin
     app.get('/super-admin/:email', verifyJWT, async (req, res) => {
       const email = req.params.email;
-      const filter = { email: email }
+      const filter = { email: email };
       const result = await userCollection.findOne(filter);
       if (result?.role === 'superAdmin') {
         return res.status(200).send({ status: 200, message: "verified admin" })
@@ -139,15 +139,41 @@ const run = async () => {
     });
 
     //api for geting all orders 
-    app.get('/all-orders', verifyJWT, verifyAdmin, async (req, res) => {
-      const result = await orderCollection.find().toArray();
-      res.send(result);
+    app.get('/all-orders/:orderStatus', verifyJWT, verifyAdmin, async (req, res) => {
+      const status = req.params.orderStatus;
+      console.log(status);
+      const filter = { orderStatus: status }
+
+      if (status === 'all-orders') {
+        const result = await orderCollection.find().toArray();
+        res.send(result);
+      } else {
+        const result = await orderCollection.find(filter).toArray();
+        res.send(result);
+      }
+
+
     })
 
+    //api for getting all foods
+    app.get('/all-foods/:category',verifyJWT,verifyAdmin,async(req,res)=>{
+      const category= req.params.category;
+      if(category==='all-foods'){
+        const result = await foodCollection.find().toArray();
+        res.send(result)
+      }else{
+        const filter= {category:category};
+        const result= await foodCollection.find(filter).toArray()
+        res.send(result);
+      }
+    })
 
-
-
-
+    // get api for all user
+    app.get('/all-user',verifyJWT,verifyAdmin, async (req, res) => {
+      const filter= {role:{$not:{$eq: 'superAdmin'}}}
+      const result = await userCollection.find(filter).toArray()
+      res.send(result);
+    })
 
 
 
@@ -199,6 +225,8 @@ const run = async () => {
 
 
 
+
+
     //****************
     // PUT APIs 
     //****************
@@ -217,7 +245,7 @@ const run = async () => {
         $set: data
       };
       const result = await userCollection.updateOne(filter, updatedDoc, options);
-      const token = jwt.sign(filter, process.env.ACCESS_TOKEN, { expiresIn: '1h' });
+      const token = jwt.sign(filter, process.env.ACCESS_TOKEN);
       res.send({ result, token });
     })
 
@@ -266,12 +294,28 @@ const run = async () => {
 
 
     //****************************************
-    //******POST APIs for Admin dashboard*****
+    //******DELETE APIs for Admin dashboard*****
     //****************************************
-    app.delete('/all-orders/:id',verifyJWT,verifyAdmin,async(req,res)=>{
+    app.delete('/all-orders/:id', verifyJWT, verifyAdmin, async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: ObjectId(id) }
+      const result = await orderCollection.deleteOne(filter)
+      res.send(result);
+    })
+
+    //api for delete food items
+    app.delete('/food-items/:id',verifyJWT,verifyAdmin,async(req,res)=>{
       const id = req.params.id;
       const filter = {_id:ObjectId(id)}
-      const result= await orderCollection.deleteOne(filter)
+      const result= await foodCollection.deleteOne(filter);
+      res.send(result);
+    })
+
+    //api for deleting user
+    app.delete('/user/:id',verifyJWT,verifyAdmin,async(req,res)=>{
+      const id = req.params.id;
+      const filter = {_id:ObjectId(id)}
+      const result= await userCollection.deleteOne(filter)
       res.send(result);
     })
 
