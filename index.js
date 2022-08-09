@@ -156,27 +156,39 @@ const run = async () => {
     })
 
     //api for getting all foods
-    app.get('/all-foods/:category',verifyJWT,verifyAdmin,async(req,res)=>{
-      const category= req.params.category;
-      if(category==='all-foods'){
+    app.get('/all-foods/:category', verifyJWT, verifyAdmin, async (req, res) => {
+      const category = req.params.category;
+      if (category === 'all-foods') {
         const result = await foodCollection.find().toArray();
         res.send(result)
-      }else{
-        const filter= {category:category};
-        const result= await foodCollection.find(filter).toArray()
+      } else {
+        const filter = { category: category };
+        const result = await foodCollection.find(filter).toArray()
         res.send(result);
       }
     })
 
     // get api for all user
-    app.get('/all-user',verifyJWT,verifyAdmin, async (req, res) => {
-      const filter= {role:{$not:{$eq: 'superAdmin'}}}
+    app.get('/all-user', verifyJWT, verifyAdmin, async (req, res) => {
+      const filter = { role: { $not: { $eq: 'superAdmin' } } }
       const result = await userCollection.find(filter).toArray()
       res.send(result);
     })
 
 
+    //api for getting user reviews
+    app.get('/user-reviews/:status', verifyJWT, verifyAdmin, async (req, res) => {
+      const status = req.params.status;
+      const filter ={ status:status}
+      if (status === 'all-review') {
+        const result = await reviewCollection.find().toArray();
+        res.send(result);
+      }else{
+        const result = await reviewCollection.find(filter).toArray();
+        res.send(result);
+      }
 
+    })
 
     //****************
     // POST APIs 
@@ -258,7 +270,6 @@ const run = async () => {
     app.put('/change-status/:id', verifyJWT, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const data = req.body;
-      console.log(data);
       const filter = { _id: ObjectId(id) };
       options = { upsert: true }
       const updatedDoc = {
@@ -267,6 +278,20 @@ const run = async () => {
       const result = await orderCollection.updateOne(filter, updatedDoc, options);
       res.send(result);
     })
+
+    //api for changing order status
+    app.put('/review-status/:id', verifyJWT, verifyAdmin, async (req, res) => {
+      const id = req.params.id;
+      const data = req.body;
+      const filter = { _id: ObjectId(id) };
+      options = { upsert: true }
+      const updatedDoc = {
+        $set: data
+      }
+      const result = await reviewCollection.updateOne(filter, updatedDoc, options);
+      res.send(result);
+    })
+
 
 
 
@@ -304,20 +329,22 @@ const run = async () => {
     })
 
     //api for delete food items
-    app.delete('/food-items/:id',verifyJWT,verifyAdmin,async(req,res)=>{
+    app.delete('/food-items/:id', verifyJWT, verifyAdmin, async (req, res) => {
       const id = req.params.id;
-      const filter = {_id:ObjectId(id)}
-      const result= await foodCollection.deleteOne(filter);
+      const filter = { _id: ObjectId(id) }
+      const result = await foodCollection.deleteOne(filter);
       res.send(result);
     })
 
     //api for deleting user
-    app.delete('/user/:id',verifyJWT,verifyAdmin,async(req,res)=>{
+    app.delete('/user/:id', verifyJWT, verifyAdmin, async (req, res) => {
       const id = req.params.id;
-      const filter = {_id:ObjectId(id)}
-      const result= await userCollection.deleteOne(filter)
+      const filter = { _id: ObjectId(id) }
+      const result = await userCollection.deleteOne(filter)
       res.send(result);
     })
+
+
 
 
 
