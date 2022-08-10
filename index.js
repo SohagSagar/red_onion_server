@@ -60,9 +60,9 @@ const run = async () => {
 
     //********* creating apis ***********//
 
-    //****************
-    // GET APIs 
-    //****************
+    //********************************************************************************
+    // ****************************************GET APIs ******************************
+    //********************************************************************************
 
 
     //****************************************
@@ -102,13 +102,13 @@ const run = async () => {
     app.get('/my-order-details/:id', verifyJWT, async (req, res) => {
       const id = req.params.id;
       const result = await orderCollection.findOne({ _id: ObjectId(id) });
-      console.log(result);
       res.send(result);
     })
 
     //api for getting all user reviews
     app.get('/user-reviews', async (req, res) => {
-      const result = await reviewCollection.find().toArray();
+      const filter = {status:'Active'}
+      const result = await reviewCollection.find(filter).toArray();
       res.send(result);
     })
 
@@ -116,8 +116,21 @@ const run = async () => {
     app.get('/user-review/:email', verifyJWT, async (req, res) => {
       const email = req.params.email;
       const result = await reviewCollection.find({ email: email }).toArray();
-      console.log('result', result);
       res.send(result);
+    })
+
+
+
+    //api for getting order history
+    app.get('/order-count',async(req,res)=>{
+      const allOrderCount = await orderCollection.estimatedDocumentCount();
+      const allProcessingCount = await orderCollection.find({orderStatus:'Processing'}).count();
+      const allShippedCount = await orderCollection.find({orderStatus:'Shipped'}).count();
+      const allCancelCount = await orderCollection.find({orderStatus:'Canceled'}).count();
+      console.log('object',allProcessingCount);
+   
+      res.send({allOrderCount,allProcessingCount,allShippedCount,allCancelCount})
+
     })
 
 
@@ -190,17 +203,15 @@ const run = async () => {
 
     })
 
-    //****************
-    // POST APIs 
-    //****************
+    //*********************************************************************************
+    // ****************************************POST APIs ******************************
+    //*********************************************************************************
 
 
 
     //****************************************
     // ******POST APIs for User dashboard*****
     //****************************************
-
-
 
 
     //api for ordering foods
@@ -211,7 +222,7 @@ const run = async () => {
     })
 
     //api for writing user review
-    app.post('/user-review', async (req, res) => {
+    app.post('/user-review',verifyJWT, async (req, res) => {
       const data = req.body;
       const result = await reviewCollection.insertOne(data);
       res.send(result);
@@ -239,9 +250,9 @@ const run = async () => {
 
 
 
-    //****************
-    // PUT APIs 
-    //****************
+  //********************************************************************************
+  //**************************************** PUT APIs ******************************
+  //********************************************************************************
 
     //****************************************
     // ******POST APIs for user dashboard*****
@@ -295,9 +306,9 @@ const run = async () => {
 
 
 
-    //****************
-    // DELETE APIs 
-    //****************
+  //***********************************************************************************
+  //**************************************** DELETE APIs ******************************
+  //***********************************************************************************
 
     //****************************************
     //******POST APIs for User dashboard*****
@@ -311,7 +322,7 @@ const run = async () => {
     })
 
     //api for deleting user review
-    app.delete('/user-review/:id', async (req, res) => {
+    app.delete('/user-review/:id',verifyJWT, async (req, res) => {
       const id = req.params.id;
       const result = await reviewCollection.deleteOne({ _id: ObjectId(id) });
       res.send(result);
