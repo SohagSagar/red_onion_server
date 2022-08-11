@@ -24,6 +24,7 @@ const verifyJWT = (req, res, next) => {
   }
 
   const token = authHeader.split(' ')[1];
+  // console.log('token',token);
   jwt.verify(token, process.env.ACCESS_TOKEN, function (err, decoded) {
     if (err) {
       console.log(err.message);
@@ -94,8 +95,20 @@ const run = async () => {
     // api for getting my-order for individual orders
     app.get('/my-order/:email', verifyJWT, async (req, res) => {
       const email = req.params.email;
-      const result = await orderCollection.find({ email: email }).toArray();
-      res.send(result);
+      const status = req.query.status;
+      if (status === 'all-orders') {
+        const result = await orderCollection.find({ email: email }).toArray();
+        res.send(result);
+      }
+      else{
+        const result = await orderCollection.find({ email: email,orderStatus:status }).toArray();
+        res.send(result);
+      }
+      // const result = await orderCollection.find({ email: email }).toArray();
+      //   res.send(result);
+      console.log('status', status);
+
+
     })
 
     //api for ordered items details
@@ -107,7 +120,7 @@ const run = async () => {
 
     //api for getting all user reviews
     app.get('/user-reviews', async (req, res) => {
-      const filter = {status:'Active'}
+      const filter = { status: 'Active' }
       const result = await reviewCollection.find(filter).toArray();
       res.send(result);
     })
@@ -122,14 +135,13 @@ const run = async () => {
 
 
     //api for getting order history
-    app.get('/order-count',async(req,res)=>{
+    app.get('/order-count', async (req, res) => {
       const allOrderCount = await orderCollection.estimatedDocumentCount();
-      const allProcessingCount = await orderCollection.find({orderStatus:'Processing'}).count();
-      const allShippedCount = await orderCollection.find({orderStatus:'Shipped'}).count();
-      const allCancelCount = await orderCollection.find({orderStatus:'Canceled'}).count();
-      console.log('object',allProcessingCount);
-   
-      res.send({allOrderCount,allProcessingCount,allShippedCount,allCancelCount})
+      const allProcessingCount = await orderCollection.find({ orderStatus: 'Processing' }).count();
+      const allShippedCount = await orderCollection.find({ orderStatus: 'Shipped' }).count();
+      const allCancelCount = await orderCollection.find({ orderStatus: 'Canceled' }).count();
+
+      res.send({ allOrderCount, allProcessingCount, allShippedCount, allCancelCount })
 
     })
 
@@ -192,11 +204,11 @@ const run = async () => {
     //api for getting user reviews
     app.get('/user-reviews/:status', verifyJWT, verifyAdmin, async (req, res) => {
       const status = req.params.status;
-      const filter ={ status:status}
+      const filter = { status: status }
       if (status === 'all-review') {
         const result = await reviewCollection.find().toArray();
         res.send(result);
-      }else{
+      } else {
         const result = await reviewCollection.find(filter).toArray();
         res.send(result);
       }
@@ -222,7 +234,7 @@ const run = async () => {
     })
 
     //api for writing user review
-    app.post('/user-review',verifyJWT, async (req, res) => {
+    app.post('/user-review', verifyJWT, async (req, res) => {
       const data = req.body;
       const result = await reviewCollection.insertOne(data);
       res.send(result);
@@ -250,9 +262,9 @@ const run = async () => {
 
 
 
-  //********************************************************************************
-  //**************************************** PUT APIs ******************************
-  //********************************************************************************
+    //********************************************************************************
+    //**************************************** PUT APIs ******************************
+    //********************************************************************************
 
     //****************************************
     // ******POST APIs for user dashboard*****
@@ -306,9 +318,9 @@ const run = async () => {
 
 
 
-  //***********************************************************************************
-  //**************************************** DELETE APIs ******************************
-  //***********************************************************************************
+    //***********************************************************************************
+    //**************************************** DELETE APIs ******************************
+    //***********************************************************************************
 
     //****************************************
     //******POST APIs for User dashboard*****
@@ -322,7 +334,7 @@ const run = async () => {
     })
 
     //api for deleting user review
-    app.delete('/user-review/:id',verifyJWT, async (req, res) => {
+    app.delete('/user-review/:id', verifyJWT, async (req, res) => {
       const id = req.params.id;
       const result = await reviewCollection.deleteOne({ _id: ObjectId(id) });
       res.send(result);
