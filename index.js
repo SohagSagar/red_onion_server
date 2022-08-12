@@ -100,13 +100,11 @@ const run = async () => {
         const result = await orderCollection.find({ email: email }).toArray();
         res.send(result);
       }
-      else{
-        const result = await orderCollection.find({ email: email,orderStatus:status }).toArray();
+      else {
+        const result = await orderCollection.find({ email: email, orderStatus: status }).toArray();
         res.send(result);
       }
-      // const result = await orderCollection.find({ email: email }).toArray();
-      //   res.send(result);
-      console.log('status', status);
+
 
 
     })
@@ -155,12 +153,16 @@ const run = async () => {
     //api for getting superAdmin
     app.get('/super-admin/:email', verifyJWT, async (req, res) => {
       const email = req.params.email;
-      const filter = { email: email };
-      const result = await userCollection.findOne(filter);
-      if (result?.role === 'superAdmin') {
-        return res.status(200).send({ status: 200, message: "verified admin" })
+      if (email) {
+        const filter = { email: email };
+        const result = await userCollection.findOne(filter);
+        if (result?.role === 'superAdmin') {
+          return res.status(200).send({ status: 200, message: "verified admin" })
+        }else{
+          res.send(result);
+        }
+      
       }
-      res.status(403).send(result);
     });
 
     //api for geting all orders 
