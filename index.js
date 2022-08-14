@@ -151,19 +151,26 @@ const run = async () => {
     //****************************************
 
     //api for getting superAdmin
-    app.get('/super-admin/:email', verifyJWT, async (req, res) => {
+    app.get('/super-admin/:email',verifyJWT, async (req, res) => {
       const email = req.params.email;
-      if (email) {
-        const filter = { email: email };
-        const result = await userCollection.findOne(filter);
-        if (result?.role === 'superAdmin') {
-          return res.status(200).send({ status: 200, message: "verified admin" })
-        }else{
-          res.send(result);
-        }
+      const user = await userCollection.findOne({ email: email });
+      const isAdmin = user?.role === 'superAdmin';
+      res.send({ admin: isAdmin });
+  })
+
+
+    // app.get('/super-admin/:email', verifyJWT, async (req, res) => {
+    //   const email = req.params.email;
+    //   if (email) {
+    //     const filter = { email: email };
+    //     const result = await userCollection.findOne(filter);
+    //     if (result?.role === 'superAdmin') {
+    //       // return res.status(200).send({ status: 200, message: "verified admin",result })
+    //       return res.send({ status: 200, message: "verified admin",result })
+    //     }
       
-      }
-    });
+    //   }
+    // });
 
     //api for geting all orders 
     app.get('/all-orders/:orderStatus', verifyJWT, verifyAdmin, async (req, res) => {
